@@ -3,20 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FastFood testi</title>
+    <title>FastFood API Test</title>
 </head>
 <body>
-    <h1>FastFood API </h1>
+    <h1>FastFood API Test</h1>
     <p>Check the console for API data.</p>
 
     <script>
         const url = 'http://127.0.0.1:8000/api/foods/';
-        const token = 'YOUR_TOKEN_HERE';
+        const accessToken = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...'; //
 
         fetch(url, {
             method: 'GET',
             headers: {
-                'Authorization': `Token ${token}`,
+                'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
             },
         })
