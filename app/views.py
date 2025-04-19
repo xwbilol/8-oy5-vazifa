@@ -4,6 +4,7 @@ from .serializers import CategorySerializer, FoodSerializer, OrderSerializer
 from .permissions import IsAdminOrReadOnly, IsOwnerOrAdmin
 from .throttles import CategoryThrottle, FoodThrottle, OrderThrottle
 from .pagination import CustomPagination
+from rest_framework.viewsets import ModelViewSet
 
 class CategoryListCreateView(generics.ListCreateAPIView):
     queryset = Category.objects.all()
@@ -53,3 +54,10 @@ class OrderRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         return Order.objects.filter(user=self.request.user)
+
+
+class CategoryViewSet(ModelViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    lookup_url_kwarg = "category_id"
+    lookup_field = "pk"

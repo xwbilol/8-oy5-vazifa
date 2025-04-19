@@ -12,5 +12,4 @@ urlpatterns = [
     path('foods/<int:pk>/', FoodRetrieveUpdateDestroyView.as_view(), name='food-detail'),
     path('orders/', OrderListCreateView.as_view(), name='order-list'),
     path('orders/<int:pk>/', OrderRetrieveUpdateDestroyView.as_view(), name='order-detail'),
-
 ]
