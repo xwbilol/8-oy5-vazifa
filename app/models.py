@@ -1,5 +1,15 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AbstractUser
+
+class User(AbstractUser):
+    ROLES = (
+        ('teacher', 'Teacher'),
+        ('student', 'Student'),
+    )
+    role = models.CharField(max_length=10, choices=ROLES, default='student')
+
+    def __str__(self):
+        return self.username
 
 class Category(models.Model):
     name = models.CharField(max_length=100)
@@ -27,3 +37,19 @@ class Order(models.Model):
 
     def __str__(self):
         return f"Order {self.id} by {self.user.username}"
+
+class Teacher(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='teacher')
+    experience = models.IntegerField()
+    specialization = models.CharField(max_length=100)
+
+    def __str__(self):
+        return f"Teacher: {self.user.username}"
+
+class Student(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student')
+    course = models.IntegerField()
+    group = models.CharField(max_length=10)
+
+    def __str__(self):
+        return f"Student: {self.user.username}"

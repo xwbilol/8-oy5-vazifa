@@ -1,5 +1,49 @@
 from rest_framework import serializers
-from .models import Category, Food, Order
+from .models import Category, Food, Order, User, Teacher, Student
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'role', 'password']
+        extra_kwargs = {'password': {'write_only': True}}
+
+    def create(self, validated_data):
+        user = User(**validated_data)
+        user.set_password(validated_data['password'])
+        user.save()
+        return user
+
+class TeacherSerializer(serializers.ModelSerializer):
+    user = UserSerializer()
+
+    class Meta:
+        model = Teacher
+        fields = ['id', 'user', 'experience', 'specialization']
+
+    def create(self, validated_data):
+        user_data = validated_data.pop('user')
+        user_data['role'] = 'teacher'
+        user_serializer = UserSerializer(data=user_data)
+        user_serializer.is_valid(raise_exception=True)
+        user = user_serializer.save()
+        teacher = Teacher.objects.create(user=user, **validated_data)
+        return teacher
+
+class StudentSerializer(serializers.ModelSerializer):
+    user = UserSerializer()
+
+    class Meta:
+        model = Student
+        fields = ['id', 'user', 'course', 'group']
+
+    def create(self, validated_data):
+        user_data = validated_data.pop('user')
+        user_data['role'] = 'student'
+        user_serializer = UserSerializer(data=user_data)
+        user_serializer.is_valid(raise_exception=True)
+        user = user_serializer.save()
+        student = Student.objects.create(user=user, **validated_data)
+        return student
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -16,22 +60,27 @@ class CategorySerializer(serializers.ModelSerializer):
         return instance
 
 class FoodSerializer(serializers.ModelSerializer):
-    category_string = serializers.StringRelatedField(source='category', read_only=True)
-    category_id = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all(), source='category', write_only=True)
-    category_link = serializers.HyperlinkedRelatedField(source='category', view_name='category-detail', read_only=True)
-    category_slug = serializers.SlugRelatedField(source='category', slug_field='name', read_only=True)
-    category = CategorySerializer(read_only=True)
+    category = CategorySerializer()
 
     class Meta:
         model = Food
-        fields = ['id', 'name', 'category', 'category_id', 'category_string', 'category_link', 'category_slug', 'price', 'description', 'available']
+        fields = ['id', 'name', 'category', 'price', 'description', 'available']
 
     def create(self, validated_data):
-        return Food.objects.create(**validated_data)
+        category_data = validated_data.pop('category')
+        category_serializer = CategorySerializer(data=category_data)
+        category_serializer.is_valid(raise_exception=True)
+        category = category_serializer.save()
+        food = Food.objects.create(category=category, **validated_data)
+        return food
 
     def update(self, instance, validated_data):
+        category_data = validated_data.pop('category', None)
+        if category_data:
+            category_serializer = CategorySerializer(instance.category, data=category_data, partial=True)
+            category_serializer.is_valid(raise_exception=True)
+            category_serializer.save()
         instance.name = validated_data.get('name', instance.name)
-        instance.category = validated_data.get('category', instance.category)
         instance.price = validated_data.get('price', instance.price)
         instance.description = validated_data.get('description', instance.description)
         instance.available = validated_data.get('available', instance.available)
@@ -39,31 +88,34 @@ class FoodSerializer(serializers.ModelSerializer):
         return instance
 
 class OrderSerializer(serializers.ModelSerializer):
-    food_string = serializers.StringRelatedField(source='food', read_only=True)
-    food_id = serializers.PrimaryKeyRelatedField(queryset=Food.objects.all(), source='food', write_only=True)
-    food_link = serializers.HyperlinkedRelatedField(source='food', view_name='food-detail', read_only=True)
-    food_slug = serializers.SlugRelatedField(source='food', slug_field='name', read_only=True)
-    order_url = serializers.HyperlinkedIdentityField(view_name='order-detail', read_only=True)
-    food = FoodSerializer(read_only=True)
+    food = FoodSerializer()
     user = serializers.StringRelatedField(read_only=True)
 
     class Meta:
         model = Order
-        fields = ['id', 'user', 'food', 'food_id', 'food_string', 'food_link', 'food_slug', 'quantity', 'total_price', 'created_at', 'order_url']
+        fields = ['id', 'user', 'food', 'quantity', 'total_price', 'created_at']
 
     def create(self, validated_data):
-        food = validated_data['food']
+        food_data = validated_data.pop('food')
+        food_serializer = FoodSerializer(data=food_data)
+        food_serializer.is_valid(raise_exception=True)
+        food = food_serializer.save()
         quantity = validated_data['quantity']
         total_price = food.price * quantity
-        return Order.objects.create(
+        order = Order.objects.create(
             user=self.context['request'].user,
             food=food,
             quantity=quantity,
             total_price=total_price
         )
+        return order
 
     def update(self, instance, validated_data):
-        instance.food = validated_data.get('food', instance.food)
+        food_data = validated_data.pop('food', None)
+        if food_data:
+            food_serializer = FoodSerializer(instance.food, data=food_data, partial=True)
+            food_serializer.is_valid(raise_exception=True)
+            food_serializer.save()
         instance.quantity = validated_data.get('quantity', instance.quantity)
         if 'quantity' in validated_data:
             instance.total_price = instance.food.price * validated_data['quantity']

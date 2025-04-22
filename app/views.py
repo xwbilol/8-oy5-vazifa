@@ -1,10 +1,12 @@
 from rest_framework import generics
-from .models import Category, Food, Order
-from .serializers import CategorySerializer, FoodSerializer, OrderSerializer
+from .models import Category, Food, Order, Teacher, Student
+from .serializers import (
+    CategorySerializer, FoodSerializer, OrderSerializer,
+    TeacherSerializer, StudentSerializer
+)
 from .permissions import IsAdminOrReadOnly, IsOwnerOrAdmin
 from .throttles import CategoryThrottle, FoodThrottle, OrderThrottle
 from .pagination import CustomPagination
-from rest_framework.viewsets import ModelViewSet
 
 class CategoryListCreateView(generics.ListCreateAPIView):
     queryset = Category.objects.all()
@@ -41,12 +43,6 @@ class OrderListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         return Order.objects.filter(user=self.request.user)
 
-    def perform_create(self, serializer):
-        food = serializer.validated_data['food']
-        quantity = serializer.validated_data['quantity']
-        total_price = food.price * quantity
-        serializer.save(user=self.request.user, total_price=total_price)
-
 class OrderRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = OrderSerializer
     permission_classes = [IsOwnerOrAdmin]
@@ -55,9 +51,8 @@ class OrderRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         return Order.objects.filter(user=self.request.user)
 
+class TeacherCreateView(generics.CreateAPIView):
+    serializer_class = TeacherSerializer
 
-class CategoryViewSet(ModelViewSet):
-    queryset = Category.objects.all()
-    serializer_class = CategorySerializer
-    lookup_url_kwarg = "category_id"
-    lookup_field = "pk"
+class StudentCreateView(generics.CreateAPIView):
+    serializer_class = StudentSerializer
